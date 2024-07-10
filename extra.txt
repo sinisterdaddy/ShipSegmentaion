@@ -96,3 +96,59 @@ mobilenetv2_unet.compile(optimizer=Adam(learning_rate=1e-4, decay=1e-6), loss=di
 
 # Model Summary (optional)
 mobilenetv2_unet.summary()
+
+
+from tensorflow.keras import backend as K
+from tensorflow.keras.losses import binary_crossentropy
+from tensorflow.keras.optimizers import Adam
+import tensorflow as tf
+
+# Dice Coefficient
+def dice_coef(y_true, y_pred, smooth=1e-6):
+    y_true_f = K.flatten(K.cast(y_true, 'float32'))
+    y_pred_f = K.flatten(K.cast(y_pred, 'float32'))
+    intersection = K.sum(y_true_f * y_pred_f)
+    dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+    
+    if K.any(K.is_nan(dice)):
+        print("NaN detected in dice coefficient")
+        print(f"y_true: {y_true_f}")
+        print(f"y_pred: {y_pred_f}")
+        print(f"intersection: {intersection}")
+        print(f"dice: {dice}")
+    
+    return dice
+
+# Dice with BCE Loss
+def dice_p_bce(y_true, y_pred):
+    # Binary Cross-Entropy loss
+    bce_loss = binary_crossentropy(y_true, y_pred)
+    
+    if K.any(K.is_nan(bce_loss)):
+        print("NaN detected in BCE loss")
+        print(f"y_true: {y_true}")
+        print(f"y_pred: {y_pred}")
+        print(f"bce_loss: {bce_loss}")
+    
+    # Dice coefficient loss
+    dice_loss = 1 - dice_coef(y_true, y_pred)
+    
+    if K.any(K.is_nan(dice_loss)):
+        print("NaN detected in Dice loss")
+        print(f"y_true: {y_true}")
+        print(f"y_pred: {y_pred}")
+        print(f"dice_loss: {dice_loss}")
+    
+    # Combined loss with a weighting factor for dice loss
+    alpha = 0.5  # Adjust the alpha to change the weight of dice loss in the overall loss function
+    combo_loss = bce_loss + alpha * dice_loss
+    
+    if K.any(K.is_nan(combo_loss)):
+        print("NaN detected in combined loss")
+        print(f"bce_loss: {bce_loss}")
+        print(f"dice_loss: {dice_loss}")
+        print(f"combo_loss: {combo_loss}")
+    
+    return combo_loss
+
+mobilenetv2_unet.compile(optimizer=Adam(learning_rate=1e-4, decay=1e-6), loss=dice_p_bce, metrics=[dice_coef])

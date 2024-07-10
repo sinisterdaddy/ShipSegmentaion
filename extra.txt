@@ -1,0 +1,11 @@
+import tensorflow as tf
+
+# List available devices
+devices = tf.config.list_physical_devices()
+print("Available devices:", devices)
+
+# Check if a GPU is available
+if tf.config.list_physical_devices('GPU'):
+    print("GPU is available")
+else:
+    print("GPU not available")
